@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WindLoss</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>💨</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Barlow:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #060a0f;
+      --surface:   #0d1520;
+      --surface2:  #111d2e;
+      --border:    #1a2e45;
+      --accent:    #00d4ff;
+      --accent2:   #ff6b35;
+      --green:     #00ff9d;
+      --text:      #cdd9e8;
+      --muted:     #4a6480;
+      --font-body: 'Barlow', sans-serif;
+      --font-mono: 'Space Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Grid de fundo animado ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Brilho de fundo */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -20%; left: 50%;
+      transform: translateX(-50%);
+      width: 800px; height: 500px;
+      background: radial-gradient(ellipse, rgba(0,212,255,0.07) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: relative; z-index: 10;
+      padding: 32px 48px 0;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      border: 1.5px solid var(--accent);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+      animation: spin 12s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    .logo-text {
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+    }
+    .logo-text span { color: var(--accent); }
+    .header-tag {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative; z-index: 10;
+      text-align: center;
+      padding: 64px 48px 48px;
+    }
+    .hero-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.3em;
+      color: var(--accent);
+      margin-bottom: 20px;
+      opacity: 0;
+      animation: fadeUp 0.6s 0.1s forwards;
+    }
+    .hero-title {
+      font-size: clamp(2.8rem, 7vw, 6rem);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      line-height: 0.95;
+      margin-bottom: 24px;
+      opacity: 0;
+      animation: fadeUp 0.7s 0.25s forwards;
+    }
+    .hero-title em {
+      font-style: normal;
+      color: var(--accent);
+      position: relative;
+    }
+    .hero-title em::after {
+      content: '';
+      position: absolute; bottom: 4px; left: 0; right: 0;
+      height: 3px;
+      background: var(--accent);
+      opacity: 0.4;
+    }
+    .hero-sub {
+      font-size: 1rem;
+      font-weight: 300;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto;
+      line-height: 1.7;
+      opacity: 0;
+      animation: fadeUp 0.6s 0.4s forwards;
+    }
+
+    /* ── LAYOUT PRINCIPAL ── */
+    .main {
+      position: relative; z-index: 10;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 48px 80px;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 32px;
+      align-items: start;
+    }
+
+    /* ── PAINEL DE INPUTS ── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 32px;
+      position: sticky;
+      top: 32px;
+      opacity: 0;
+      animation: fadeUp 0.7s 0.5s forwards;
+    }
+    .panel-title {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      margin-bottom: 28px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .panel-title::after {
+      content: '';
+      flex: 1; height: 1px;
+      background: var(--border);
+    }
+
+    .field { margin-bottom: 24px; }
+    .field label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .field .hint {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+      display: block;
+    }
+    .input-wrap {
+      position: relative;
+      display: flex; align-items: center;
+    }
+    .input-wrap input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      padding: 12px 16px;
+      padding-right: 60px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+    .input-wrap input::-webkit-outer-spin-button,
+    .input-wrap input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .input-wrap input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,212,255,0.08);
+    }
+    .input-unit {
+      position: absolute; right: 14px;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    /* Slider */
+    .slider-wrap { margin-top: 8px; }
+    input[type="range"] {
+      width: 100%;
+      appearance: none;
+      height: 3px;
+      background: var(--border);
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--bg);
+      box-shadow: 0 0 8px rgba(0,212,255,0.5);
+    }
+    .slider-labels {
+      display: flex; justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .slider-value {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--accent);
+      text-align: center;
+      margin-top: 4px;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 28px 0;
+    }
+
+    /* ── RESULTADOS ── */
+    .results {
+      display: flex; flex-direction: column; gap: 24px;
+      opacity: 0;
+      animation: fadeUp 0.7s 0.65s forwards;
+    }
+
+    /* KPIs */
+    .kpis {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .kpi {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 24px 20px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.25s;
+    }
+    .kpi::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+    .kpi.loss::before   { background: var(--accent2); }
+    .kpi.saving::before { background: var(--green); }
+    .kpi.energy::before { background: var(--accent); }
+    .kpi.roi::before    { background: #a78bfa; }
+
+    .kpi:hover { border-color: var(--muted); }
+    .kpi-label {
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+    .kpi-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .kpi.loss   .kpi-value { color: var(--accent2); }
+    .kpi.saving .kpi-value { color: var(--green); }
+    .kpi.energy .kpi-value { color: var(--accent); }
+    .kpi.roi    .kpi-value { color: #a78bfa; }
+    .kpi-sub {
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    /* Gráfico */
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 28px;
+    }
+    .card-title {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      margin-bottom: 20px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .card-title::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* Barra de comparação */
+    .compare {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 28px;
+    }
+    .compare-row {
+      display: flex; align-items: center; gap: 16px;
+      margin-bottom: 20px;
+    }
+    .compare-row:last-child { margin-bottom: 0; }
+    .compare-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      min-width: 160px;
+      color: var(--text);
+    }
+    .bar-track {
+      flex: 1;
+      height: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      transition: width 0.8s cubic-bezier(0.16,1,0.3,1);
+    }
+    .bar-fill.current  { background: var(--accent2); }
+    .bar-fill.monitor  { background: var(--green); }
+    .compare-val {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      min-width: 80px;
+      text-align: right;
+      color: var(--muted);
+    }
+
+    /* Alerta de impacto */
+    .alert-box {
+      border: 1px solid var(--accent2);
+      background: rgba(255,107,53,0.05);
+      padding: 20px 24px;
+      display: flex; gap: 16px; align-items: flex-start;
+    }
+    .alert-icon { font-size: 1.4rem; flex-shrink: 0; }
+    .alert-text { font-size: 0.85rem; line-height: 1.7; color: var(--text); }
+    .alert-text strong { color: var(--accent2); }
+
+    /* Rodapé */
+    footer {
+      position: relative; z-index: 10;
+      text-align: center;
+      padding: 32px;
+      border-top: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+    footer span { color: var(--accent); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 900px) {
+      header { padding: 24px; }
+      .hero  { padding: 40px 24px 32px; }
+      .main  { grid-template-columns: 1fr; padding: 0 24px 60px; }
+      .panel { position: static; }
+      .kpis  { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 500px) {
+      .kpis { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⟳</div>
+      <div class="logo-text">WIND<span>LOSS</span></div>
+    </div>
+    <div class="header-tag">SIMULADOR DE PERDA DE ENERGIA EÓLICA MENSAL</div>
+  </header>
+
+  <!-- HERO -->
+  <div class="hero">
+    <p class="hero-eyebrow">análise de performance eólica</p>
+    <h1 class="hero-title">
+      Quanto seu parque<br>
+      está <em>perdendo</em>?
+    </h1>
+    <p class="hero-sub">
+      Calcule as perdas financeiras por indisponibilidade e descubra o impacto real de um monitoramento eficiente no seu parque eólico.
+    </p>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- PAINEL DE INPUTS -->
+    <div class="panel">
+      <div class="panel-title">PARÂMETROS DO PARQUE</div>
+
+      <div class="field">
+        <label>Número de turbinas</label>
+        <span class="hint"> quantidade total instalada</span>
+        <div class="input-wrap">
+          <input type="number" id="turbinas" value="20" min="1" max="500" />
+          <span class="input-unit">un</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Potência por turbina</label>
+        <span class="hint"> capacidade nominal de cada aerogerador</span>
+        <div class="input-wrap">
+          <input type="number" id="potencia" value="3.0" min="0.5" max="15" step="0.1" />
+          <span class="input-unit">MW</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Fator de capacidade</label>
+        <span class="hint"> % do tempo com vento aproveitável (~30% típico BR)</span>
+        <div class="slider-wrap">
+          <input type="range" id="fator-range" min="15" max="55" value="32" oninput="syncSlider('fator')" />
+          <div class="slider-labels"><span>15%</span><span>55%</span></div>
+          <div class="slider-value" id="fator-display">32%</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Disponibilidade atual</label>
+        <span class="hint"> % do tempo em que as turbinas estão operacionais</span>
+        <div class="slider-wrap">
+          <input type="range" id="disp-range" min="60" max="100" value="82" oninput="syncSlider('disp')" />
+          <div class="slider-labels"><span>60%</span><span>100%</span></div>
+          <div class="slider-value" id="disp-display">82%</div>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="field">
+        <label>Preço médio de venda</label>
+        <span class="hint"> valor do MWh no contrato ou mercado spot</span>
+        <div class="input-wrap">
+          <input type="number" id="preco" value="220" min="50" max="1000" />
+          <span class="input-unit">R$/MWh</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Com monitoramento — disponibilidade alvo</label>
+        <span class="hint"> % pretendida da disponibilidade</span>
+        <div class="slider-wrap">
+          <input type="range" id="meta-range" min="85" max="100" value="96" oninput="syncSlider('meta')" />
+          <div class="slider-labels"><span>85%</span><span>100%</span></div>
+          <div class="slider-value" id="meta-display">96%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULTADOS -->
+    <div class="results">
+
+      <!-- KPIs -->
+      <div class="kpis">
+        <div class="kpi loss">
+          <div class="kpi-label">⚡ PERDAS MENSAIS</div>
+          <div class="kpi-value" id="kpi-perda-rs">—</div>
+          <div class="kpi-sub" id="kpi-perda-mwh">— MWh não gerados</div>
+        </div>
+        <div class="kpi saving">
+          <div class="kpi-label">💰 ECONOMIA C/ MONITORAMENTO</div>
+          <div class="kpi-value" id="kpi-economia">—</div>
+          <div class="kpi-sub" id="kpi-economia-ano">— por ano</div>
+        </div>
+        <div class="kpi energy">
+          <div class="kpi-label">🏭 CAPACIDADE DO PARQUE</div>
+          <div class="kpi-value" id="kpi-capacidade">—</div>
+          <div class="kpi-sub" id="kpi-geracao">— MWh/mês de geração máxima</div>
+        </div>
+        <div class="kpi roi">
+          <div class="kpi-label">📈 MWh RECUPERADOS/MÊS</div>
+          <div class="kpi-value" id="kpi-mwh-rec">—</div>
+          <div class="kpi-sub">com disponibilidade alvo</div>
+        </div>
+      </div>
+
+      <!-- Alerta -->
+      <div class="alert-box" id="alert-box">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-text" id="alert-text">
+          Preencha os parâmetros para ver a análise de impacto.
+        </div>
+      </div>
+
+      <!-- Gráfico mensal -->
+      <div class="chart-card">
+        <div class="card-title">GERAÇÃO MENSAL — ATUAL vs. COM MONITORAMENTO</div>
+        <canvas id="chart" height="220"></canvas>
+      </div>
+
+      <!-- Barras comparativas -->
+      <div class="compare">
+        <div class="card-title">COMPARATIVO DE PERFORMANCE</div>
+
+        <div class="compare-row">
+          <div class="compare-label">Disponibilidade atual</div>
+          <div class="bar-track">
+            <div class="bar-fill current" id="bar-disp-atual" style="width:0%"></div>
+          </div>
+          <div class="compare-val" id="val-disp-atual">—</div>
+        </div>
+
+        <div class="compare-row">
+          <div class="compare-label">Disponibilidade alvo</div>
+          <div class="bar-track">
+            <div class="bar-fill monitor" id="bar-disp-meta" style="width:0%"></div>
+          </div>
+          <div class="compare-val" id="val-disp-meta">—</div>
+        </div>
+
+        <div class="compare-row">
+          <div class="compare-label">Geração atual (MWh/mês)</div>
+          <div class="bar-track">
+            <div class="bar-fill current" id="bar-ger-atual" style="width:0%"></div>
+          </div>
+          <div class="compare-val" id="val-ger-atual">—</div>
+        </div>
+
+        <div class="compare-row">
+          <div class="compare-label">Geração c/ monitoramento</div>
+          <div class="bar-track">
+            <div class="bar-fill monitor" id="bar-ger-meta" style="width:0%"></div>
+          </div>
+          <div class="compare-val" id="val-ger-meta">—</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    Desenvolvido por <span>José Augusto C.C.</span> · Dados simulados
+  </footer>
+
+  <script>
+    // SINCRONIZAÇÃO DOS SLIDERS
+    // Cada slider atualiza o texto de display
+    // e dispara o recálculo em tempo real.
+    function syncSlider(id) {
+      const map = {
+        'fator': ['fator-range', 'fator-display'],
+        'disp':  ['disp-range',  'disp-display'],
+        'meta':  ['meta-range',  'meta-display'],
+      };
+      const [rangeId, displayId] = map[id];
+      const val = document.getElementById(rangeId).value;
+      document.getElementById(displayId).textContent = val + '%';
+      calcular();
+    }
+
+    // Formata número como moeda BRL
+    function brl(val) {
+      return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+    }
+
+    // Formata MWh
+    function mwh(val) {
+      return val.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + ' MWh';
+    }
+
+    // ─────────────────────────────────────────
+    // GRÁFICO
+    // ─────────────────────────────────────────
+    const ctx = document.getElementById('chart').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        // Rótulos: últimos 6 meses simulados
+        labels: ['Nov', 'Dez', 'Jan', 'Fev', 'Mar', 'Abr'],
+        datasets: [
+          {
+            label: 'Geração atual (MWh)',
+            data: [],
+            backgroundColor: 'rgba(255,107,53,0.7)',
+            borderColor: '#ff6b35',
+            borderWidth: 1,
+          },
+          {
+            label: 'Geração c/ monitoramento (MWh)',
+            data: [],
+            backgroundColor: 'rgba(0,255,157,0.5)',
+            borderColor: '#00ff9d',
+            borderWidth: 1,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            labels: {
+              color: '#4a6480',
+              font: { family: 'Space Mono', size: 10 }
+            }
+          },
+          tooltip: {
+            backgroundColor: '#0d1520',
+            borderColor: '#1a2e45',
+            borderWidth: 1,
+            titleColor: '#00d4ff',
+            bodyColor: '#cdd9e8',
+            callbacks: {
+              label: ctx => ' ' + ctx.dataset.label + ': ' +
+                ctx.raw.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) + ' MWh'
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#4a6480', font: { family: 'Space Mono', size: 10 } },
+            grid: { color: '#1a2e45' }
+          },
+          y: {
+            ticks: { color: '#4a6480', font: { family: 'Space Mono', size: 10 } },
+            grid: { color: '#1a2e45' },
+            beginAtZero: true
+          }
+        }
+      }
+    });
+
+    // ─────────────────────────────────────────
+    // CÁLCULO PRINCIPAL
+    // ─────────────────────────────────────────
+    function calcular() {
+      // Leitura dos inputs
+      const turbinas  = parseFloat(document.getElementById('turbinas').value)  || 0;
+      const potencia  = parseFloat(document.getElementById('potencia').value)   || 0;
+      const fator     = parseFloat(document.getElementById('fator-range').value) / 100;
+      const disp      = parseFloat(document.getElementById('disp-range').value)  / 100;
+      const meta      = parseFloat(document.getElementById('meta-range').value)  / 100;
+      const preco     = parseFloat(document.getElementById('preco').value)       || 0;
+
+      // ── Capacidade total do parque
+      const capacidade_mw = turbinas * potencia; // MW
+
+      // ── Horas no mês
+      const horas_mes = 24 * 30; // 720h
+
+      // ── Geração máxima teórica (100% disponibilidade × fator de capacidade)
+      const geracao_max = capacidade_mw * horas_mes * fator; // MWh/mês
+
+      // ── Geração real com disponibilidade atual
+      const geracao_atual = geracao_max * disp;
+
+      // ── Geração com monitoramento (disponibilidade alvo)
+      const geracao_meta = geracao_max * meta;
+
+      // ── Perdas mensais (diferença entre máximo e atual)
+      const perda_mwh = geracao_max - geracao_atual;
+      const perda_rs  = perda_mwh * preco;
+
+      // ── Energia recuperada com monitoramento
+      const mwh_recuperado = geracao_meta - geracao_atual;
+      const economia_mes   = mwh_recuperado * preco;
+      const economia_ano   = economia_mes * 12;
+
+      // ── Atualiza KPIs
+      document.getElementById('kpi-perda-rs').textContent   = brl(perda_rs);
+      document.getElementById('kpi-perda-mwh').textContent  = mwh(perda_mwh) + ' não gerados/mês';
+      document.getElementById('kpi-economia').textContent   = brl(economia_mes) + '/mês';
+      document.getElementById('kpi-economia-ano').textContent = brl(economia_ano) + ' por ano';
+      document.getElementById('kpi-capacidade').textContent = capacidade_mw.toLocaleString('pt-BR') + ' MW';
+      document.getElementById('kpi-geracao').textContent    = mwh(geracao_max) + '/mês potencial';
+      document.getElementById('kpi-mwh-rec').textContent    = mwh(mwh_recuperado > 0 ? mwh_recuperado : 0);
+
+      // ── Alerta de impacto
+      const alertEl = document.getElementById('alert-text');
+      const dispPct = Math.round(disp * 100);
+      const metaPct = Math.round(meta * 100);
+      if (mwh_recuperado > 0) {
+        alertEl.innerHTML = `
+          Com disponibilidade atual de <strong>${dispPct}%</strong>, seu parque deixa de gerar
+          <strong>${mwh(perda_mwh)}</strong> por mês. Elevando a disponibilidade para
+          <strong>${metaPct}%</strong> com monitoramento inteligente, é possível recuperar
+          <strong>${brl(economia_ano)}</strong> ao ano.
+        `;
+      } else {
+        alertEl.innerHTML = `Disponibilidade alvo deve ser maior que a atual para calcular o ganho.`;
+      }
+
+      // ── Barras comparativas
+      document.getElementById('bar-disp-atual').style.width = (disp * 100) + '%';
+      document.getElementById('bar-disp-meta').style.width  = (meta * 100) + '%';
+      document.getElementById('val-disp-atual').textContent = Math.round(disp*100) + '%';
+      document.getElementById('val-disp-meta').textContent  = Math.round(meta*100) + '%';
+
+      const maxGer = geracao_meta > 0 ? geracao_meta : 1;
+      document.getElementById('bar-ger-atual').style.width = (geracao_atual / maxGer * 100) + '%';
+      document.getElementById('bar-ger-meta').style.width  = '100%';
+      document.getElementById('val-ger-atual').textContent = mwh(geracao_atual);
+      document.getElementById('val-ger-meta').textContent  = mwh(geracao_meta);
+
+      // ── Gráfico: simula variação mensal com ruído leve
+      //    para parecer mais realista do que 6 barras idênticas
+      const seed = turbinas + potencia + disp;
+      const variacao = [0.97, 1.03, 0.99, 1.01, 0.98, 1.02]; // variação suave
+      chart.data.datasets[0].data = variacao.map(v => +(geracao_atual * v).toFixed(0));
+      chart.data.datasets[1].data = variacao.map(v => +(geracao_meta  * v).toFixed(0));
+      chart.update();
+    }
+
+    // ─────────────────────────────────────────
+    // EVENT LISTENERS
+    // ─────────────────────────────────────────
+    // Recalcula sempre que qualquer input mudar
+    ['turbinas', 'potencia', 'preco'].forEach(id => {
+      document.getElementById(id).addEventListener('input', calcular);
+    });
+
+    // Cálculo inicial ao carregar a página
+    calcular();
+  </script>
+</body>
+</html>
